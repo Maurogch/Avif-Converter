@@ -4,6 +4,8 @@ const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
+// Using archiver v6 as it doesn't require ESM modules
+const archiver = require('archiver');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -14,6 +16,7 @@ const outputDir = process.env.OUTPUT_DIR || '/tmp/avif-outputs';
 [uploadDir, outputDir].forEach(d => fs.mkdirSync(d, { recursive: true }));
 
 app.use(cors());
+app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Auto-clean files older than 10 minutes
@@ -49,7 +52,7 @@ app.post('/convert', upload.array('files', 20), async (req, res) => {
     return res.status(400).json({ error: 'Format must be jpg or png' });
   }
 
-  const quality = parseInt(req.body.quality) || 85;
+  const quality = parseInt(req.body.quality) || 90;
   const results = [];
 
   for (const file of req.files) {
@@ -90,10 +93,33 @@ app.post('/convert', upload.array('files', 20), async (req, res) => {
 });
 
 app.get('/download/:filename', (req, res) => {
-  const filename = path.basename(req.params.filename); // prevent path traversal
+  const filename = path.basename(req.params.filename);
   const filePath = path.join(outputDir, filename);
   if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'File not found or expired' });
   res.download(filePath);
+});
+
+app.post('/download-all', async (req, res) => {
+  const { filenames } = req.body;
+  if (!Array.isArray(filenames) || filenames.length === 0) {
+    return res.status(400).json({ error: 'No filenames provided' });
+  }
+
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', 'attachment; filename="converted.zip"');
+
+  const archive = archiver('zip', { zlib: { level: 6 } });
+  archive.pipe(res);
+
+  for (const name of filenames) {
+    const safe = path.basename(name);
+    const filePath = path.join(outputDir, safe);
+    if (fs.existsSync(filePath)) {
+      archive.file(filePath, { name: safe });
+    }
+  }
+
+  await archive.finalize();
 });
 
 app.listen(PORT, () => {

@@ -415,6 +415,54 @@
     text-align: center;
   }
 
+  .btn-dl-all {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 680px;
+    margin-bottom: 16px;
+    padding: 14px;
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 10px;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+
+  .btn-dl-all:hover {
+    background: var(--accent);
+    color: #0d0f12;
+    box-shadow: 0 4px 20px var(--accent-glow);
+  }
+
+  .btn-reset {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: color 0.15s;
+    letter-spacing: 0.05em;
+  }
+
+  .btn-reset:hover { color: var(--danger); }
+
+  .btn-dl-all:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
   footer {
     margin-top: 40px;
     font-size: 12px;
@@ -458,16 +506,19 @@
     <div class="option-group" id="qualityGroup">
       <label>JPG Quality</label>
       <div class="slider-wrap">
-        <input type="range" id="quality" min="10" max="100" value="85"
+        <input type="range" id="quality" min="10" max="100" value="90"
                oninput="document.getElementById('qval').textContent=this.value">
-        <span class="quality-val" id="qval">85</span>
+        <span class="quality-val" id="qval">90</span>
       </div>
     </div>
   </div>
 
-  <button class="btn-convert" id="convertBtn" disabled onclick="startConvert()">
-    Convert
-  </button>
+  <div style="display:flex;gap:10px;align-items:center;margin-top:20px;">
+    <button class="btn-convert" id="convertBtn" disabled onclick="startConvert()" style="margin-top:0;flex:1">
+      Convert
+    </button>
+    <button class="btn-reset" id="resetBtn" onclick="resetAll()" title="Clear everything">↺ Reset</button>
+  </div>
 
   <div class="progress-wrap" id="progressWrap" style="display:none">
     <div class="progress-bar" id="progressBar" style="width:0%"></div>
@@ -475,6 +526,7 @@
   <div class="status-msg" id="statusMsg"></div>
 </div>
 
+<button class="btn-dl-all" id="dlAllBtn" style="display:none" onclick="downloadAll()">⬇ Download All as ZIP</button>
 <div id="results"></div>
 
 <footer>No data is sent to third parties · files auto-deleted after 10 min</footer>
@@ -633,6 +685,56 @@
 
       results.appendChild(card);
     });
+
+    // Show/hide download all button
+    const successes = resultList.filter(r => !r.error);
+    const dlAllBtn = document.getElementById('dlAllBtn');
+    if (successes.length > 1) {
+      dlAllBtn.style.display = 'flex';
+      dlAllBtn.dataset.filenames = JSON.stringify(successes.map(r => r.outputName));
+    } else {
+      dlAllBtn.style.display = 'none';
+    }
+  }
+
+  async function downloadAll() {
+    const btn = document.getElementById('dlAllBtn');
+    const filenames = JSON.parse(btn.dataset.filenames || '[]');
+    if (!filenames.length) return;
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Preparing ZIP...';
+
+    try {
+      const res = await fetch('/download-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filenames })
+      });
+      if (!res.ok) throw new Error('ZIP failed');
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'converted.zip';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Failed to create ZIP: ' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '⬇ Download All as ZIP';
+    }
+  }
+
+  function resetAll() {
+    files = [];
+    renderQueue();
+    document.getElementById('results').innerHTML = '';
+    document.getElementById('dlAllBtn').style.display = 'none';
+    document.getElementById('statusMsg').textContent = '';
+    document.getElementById('fileInput').value = '';
   }
 </script>
 </body>
