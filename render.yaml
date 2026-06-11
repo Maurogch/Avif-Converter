@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: avif-converter
+    runtime: node
+    buildCommand: npm install
+    startCommand: node server.js
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: UPLOAD_DIR
+        value: /tmp/avif-uploads
+      - key: OUTPUT_DIR
+        value: /tmp/avif-outputs

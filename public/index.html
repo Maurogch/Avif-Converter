@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AVIF Converter</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #0d0f12;
+    --surface: #151820;
+    --surface2: #1c2030;
+    --border: #252a38;
+    --accent: #00e5cc;
+    --accent-dim: rgba(0,229,204,0.12);
+    --accent-glow: rgba(0,229,204,0.25);
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --danger: #f87171;
+    --success: #4ade80;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  .logo {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    opacity: 0.8;
+  }
+
+  h1 {
+    font-size: clamp(28px, 5vw, 42px);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  h1 span {
+    color: var(--accent);
+  }
+
+  .subtitle {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    width: 100%;
+    max-width: 680px;
+    margin-bottom: 20px;
+  }
+
+  /* Drop zone */
+  .dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .dropzone:hover, .dropzone.drag-over {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  .dropzone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .drop-icon {
+    font-size: 36px;
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  .drop-title {
+    font-size: 15px;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  .drop-hint {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+
+  /* Options row */
+  .options {
+    display: flex;
+    gap: 16px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+
+  .option-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 140px;
+  }
+
+  label {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+
+  .seg-control {
+    display: flex;
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 3px;
+  }
+
+  .seg-control button {
+    flex: 1;
+    padding: 7px 0;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.05em;
+  }
+
+  .seg-control button.active {
+    background: var(--accent);
+    color: #0d0f12;
+  }
+
+  .slider-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    flex: 1;
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    outline: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+
+  .quality-val {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    min-width: 28px;
+    text-align: right;
+  }
+
+  /* Convert button */
+  .btn-convert {
+    width: 100%;
+    margin-top: 20px;
+    padding: 14px;
+    background: var(--accent);
+    color: #0d0f12;
+    border: none;
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .btn-convert:hover:not(:disabled) {
+    box-shadow: 0 4px 20px var(--accent-glow);
+    transform: translateY(-1px);
+  }
+
+  .btn-convert:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* File queue */
+  .file-queue {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .file-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+
+  .file-item .name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .file-item .size {
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .file-item .remove {
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    transition: color 0.15s;
+    background: none;
+    border: none;
+  }
+  .file-item .remove:hover { color: var(--danger); }
+
+  /* Results */
+  #results {
+    width: 100%;
+    max-width: 680px;
+  }
+
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 12px;
+    transition: border-color 0.2s;
+  }
+
+  .result-card.success { border-color: rgba(74,222,128,0.3); }
+  .result-card.error { border-color: rgba(248,113,113,0.3); }
+
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .result-name {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .result-error {
+    color: var(--danger);
+    font-size: 13px;
+    font-family: var(--mono);
+  }
+
+  .btn-dl {
+    padding: 7px 16px;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    text-decoration: none;
+    transition: all 0.15s;
+  }
+
+  .btn-dl:hover {
+    background: var(--accent);
+    color: #0d0f12;
+  }
+
+  /* Size comparison bar */
+  .size-compare {
+    margin-top: 4px;
+  }
+
+  .size-labels {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .size-labels .delta {
+    color: var(--success);
+    font-weight: 600;
+  }
+  .size-labels .delta.bigger { color: var(--danger); }
+
+  .bar-track {
+    height: 6px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .bar-original {
+    position: absolute;
+    inset: 0;
+    background: var(--muted);
+    border-radius: 3px;
+    opacity: 0.4;
+  }
+
+  .bar-output {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    background: var(--accent);
+    border-radius: 3px;
+    transition: width 0.6s cubic-bezier(0.34,1.56,0.64,1);
+    width: 0;
+  }
+
+  .dim-info {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  /* Progress */
+  .progress-wrap {
+    margin-top: 12px;
+    height: 3px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s;
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+
+  .status-msg {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 8px;
+    text-align: center;
+  }
+
+  footer {
+    margin-top: 40px;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+    text-align: center;
+  }
+
+  @media (max-width: 500px) {
+    .options { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Image Utility</div>
+  <h1>AVIF <span>→</span> JPG / PNG</h1>
+  <p class="subtitle">Free, local conversion. Files expire in 10 minutes.</p>
+</header>
+
+<div class="card">
+  <div class="dropzone" id="dropzone">
+    <input type="file" id="fileInput" accept=".avif,image/avif" multiple>
+    <span class="drop-icon">⬡</span>
+    <div class="drop-title">Drop AVIF files here</div>
+    <div class="drop-hint">or click to browse · up to 20 files · 50MB each</div>
+  </div>
+
+  <div class="file-queue" id="fileQueue"></div>
+
+  <div class="options">
+    <div class="option-group">
+      <label>Output format</label>
+      <div class="seg-control">
+        <button class="active" data-fmt="jpg" onclick="setFormat(this)">JPG</button>
+        <button data-fmt="png" onclick="setFormat(this)">PNG</button>
+      </div>
+    </div>
+
+    <div class="option-group" id="qualityGroup">
+      <label>JPG Quality</label>
+      <div class="slider-wrap">
+        <input type="range" id="quality" min="10" max="100" value="85"
+               oninput="document.getElementById('qval').textContent=this.value">
+        <span class="quality-val" id="qval">85</span>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn-convert" id="convertBtn" disabled onclick="startConvert()">
+    Convert
+  </button>
+
+  <div class="progress-wrap" id="progressWrap" style="display:none">
+    <div class="progress-bar" id="progressBar" style="width:0%"></div>
+  </div>
+  <div class="status-msg" id="statusMsg"></div>
+</div>
+
+<div id="results"></div>
+
+<footer>No data is sent to third parties · files auto-deleted after 10 min</footer>
+
+<script>
+  let files = [];
+  let format = 'jpg';
+
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const fileQueue = document.getElementById('fileQueue');
+  const convertBtn = document.getElementById('convertBtn');
+  const results = document.getElementById('results');
+
+  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropzone.classList.remove('drag-over');
+    addFiles([...e.dataTransfer.files]);
+  });
+  fileInput.addEventListener('change', () => addFiles([...fileInput.files]));
+
+  function addFiles(newFiles) {
+    const avifs = newFiles.filter(f => f.name.toLowerCase().endsWith('.avif') || f.type === 'image/avif');
+    files = [...files, ...avifs].slice(0, 20);
+    renderQueue();
+  }
+
+  function removeFile(idx) {
+    files.splice(idx, 1);
+    renderQueue();
+  }
+
+  function renderQueue() {
+    fileQueue.innerHTML = '';
+    files.forEach((f, i) => {
+      const el = document.createElement('div');
+      el.className = 'file-item';
+      el.innerHTML = `
+        <span class="name">${f.name}</span>
+        <span class="size">${fmtSize(f.size)}</span>
+        <button class="remove" onclick="removeFile(${i})" title="Remove">✕</button>
+      `;
+      fileQueue.appendChild(el);
+    });
+    convertBtn.disabled = files.length === 0;
+    convertBtn.textContent = files.length > 1
+      ? `Convert ${files.length} files`
+      : 'Convert';
+  }
+
+  function setFormat(btn) {
+    format = btn.dataset.fmt;
+    document.querySelectorAll('.seg-control button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('qualityGroup').style.display = format === 'jpg' ? '' : 'none';
+  }
+
+  function fmtSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+    return (bytes/1024/1024).toFixed(2) + ' MB';
+  }
+
+  async function startConvert() {
+    if (!files.length) return;
+    convertBtn.disabled = true;
+    results.innerHTML = '';
+
+    const progressWrap = document.getElementById('progressWrap');
+    const progressBar = document.getElementById('progressBar');
+    const statusMsg = document.getElementById('statusMsg');
+
+    progressWrap.style.display = '';
+    progressBar.style.width = '10%';
+    statusMsg.textContent = `Converting ${files.length} file${files.length>1?'s':''}…`;
+
+    const fd = new FormData();
+    files.forEach(f => fd.append('files', f));
+    fd.append('format', format);
+    fd.append('quality', document.getElementById('quality').value);
+
+    try {
+      progressBar.style.width = '40%';
+      const res = await fetch('/convert', { method: 'POST', body: fd });
+      progressBar.style.width = '90%';
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Server error');
+      }
+
+      const data = await res.json();
+      progressBar.style.width = '100%';
+      statusMsg.textContent = `Done — ${data.results.filter(r=>!r.error).length} converted successfully`;
+
+      setTimeout(() => { progressWrap.style.display = 'none'; }, 800);
+
+      renderResults(data.results);
+      files = [];
+      renderQueue();
+    } catch (err) {
+      progressWrap.style.display = 'none';
+      statusMsg.textContent = `Error: ${err.message}`;
+      convertBtn.disabled = false;
+    }
+  }
+
+  function renderResults(resultList) {
+    resultList.forEach(r => {
+      const card = document.createElement('div');
+
+      if (r.error) {
+        card.className = 'result-card error';
+        card.innerHTML = `
+          <div class="result-header">
+            <div class="result-name">${r.originalName}</div>
+          </div>
+          <div class="result-error">⚠ ${r.error}</div>
+        `;
+      } else {
+        const savedPct = ((1 - r.outputSize / r.originalSize) * 100).toFixed(1);
+        const saved = parseFloat(savedPct);
+        const barWidth = Math.min(100, Math.max(5, (r.outputSize / r.originalSize) * 100));
+        const deltaClass = saved >= 0 ? '' : 'bigger';
+        const deltaText = saved >= 0
+          ? `↓ ${savedPct}% smaller`
+          : `↑ ${Math.abs(savedPct)}% larger`;
+
+        card.className = 'result-card success';
+        card.innerHTML = `
+          <div class="result-header">
+            <div class="result-name">${r.originalName}</div>
+            <a class="btn-dl" href="${r.downloadUrl}" download>↓ Download</a>
+          </div>
+          <div class="size-compare">
+            <div class="size-labels">
+              <span>${fmtSize(r.originalSize)} → ${fmtSize(r.outputSize)}</span>
+              <span class="delta ${deltaClass}">${deltaText}</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-original"></div>
+              <div class="bar-output" id="bar-${r.outputName}" style="width:0%"></div>
+            </div>
+          </div>
+          <div class="dim-info">${r.width} × ${r.height}px · .${r.format.toUpperCase()}</div>
+        `;
+
+        // Animate bar after render
+        setTimeout(() => {
+          const bar = document.getElementById(`bar-${r.outputName}`);
+          if (bar) bar.style.width = barWidth + '%';
+        }, 80);
+      }
+
+      results.appendChild(card);
+    });
+  }
+</script>
+</body>
+</html>

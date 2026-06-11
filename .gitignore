@@ -1,3 +1,7 @@
+# Input-Output folders
+uploads/
+outputs/
+
 # Logs
 logs
 *.log
